@@ -1,27 +1,20 @@
-import 'package:hive/hive.dart';
+import 'dart:convert';
 
-import '../../../../core/constants/app_constants.dart';
 import '../../domain/entities/location_record.dart';
 
-part 'location_record_model.g.dart';
-
-/// Data model for LocationRecord with Hive annotations for persistence.
+/// Data model for LocationRecord with JSON serialization.
 /// Extends the domain entity and adds serialization capabilities.
-@HiveType(typeId: AppConstants.locationRecordTypeId)
+/// Uses JSON instead of Hive TypeAdapter for better cross-isolate compatibility.
 class LocationRecordModel extends LocationRecord {
-  @HiveField(0)
   @override
   final DateTime timestamp;
 
-  @HiveField(1)
   @override
   final double latitude;
 
-  @HiveField(2)
   @override
   final double longitude;
 
-  @HiveField(3)
   @override
   final String address;
 
@@ -31,11 +24,11 @@ class LocationRecordModel extends LocationRecord {
     required this.longitude,
     required this.address,
   }) : super(
-          timestamp: timestamp,
-          latitude: latitude,
-          longitude: longitude,
-          address: address,
-        );
+         timestamp: timestamp,
+         latitude: latitude,
+         longitude: longitude,
+         address: address,
+       );
 
   /// Converts this model to a domain entity.
   LocationRecord toEntity() {
@@ -54,6 +47,38 @@ class LocationRecordModel extends LocationRecord {
       latitude: entity.latitude,
       longitude: entity.longitude,
       address: entity.address,
+    );
+  }
+
+  /// Converts this model to a JSON map.
+  Map<String, dynamic> toJson() {
+    return {
+      'timestamp': timestamp.toIso8601String(),
+      'latitude': latitude,
+      'longitude': longitude,
+      'address': address,
+    };
+  }
+
+  /// Creates a model from a JSON map.
+  factory LocationRecordModel.fromJson(Map<String, dynamic> json) {
+    return LocationRecordModel(
+      timestamp: DateTime.parse(json['timestamp'] as String),
+      latitude: (json['latitude'] as num).toDouble(),
+      longitude: (json['longitude'] as num).toDouble(),
+      address: json['address'] as String,
+    );
+  }
+
+  /// Encodes this model to a JSON string for Hive storage.
+  String toJsonString() {
+    return jsonEncode(toJson());
+  }
+
+  /// Decodes a model from a JSON string from Hive storage.
+  factory LocationRecordModel.fromJsonString(String jsonString) {
+    return LocationRecordModel.fromJson(
+      jsonDecode(jsonString) as Map<String, dynamic>,
     );
   }
 

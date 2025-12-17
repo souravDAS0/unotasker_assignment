@@ -2,7 +2,7 @@ name: unotasker_assignment
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -46,8 +46,10 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
 
-  # Background Tasks
-  workmanager: ^0.9.0
+  # Background Service
+  flutter_background_service: 5.1.0
+  flutter_background_service_android: ^6.2.7
+  flutter_background_service_ios: ^5.0.2
 
   # Notifications
   flutter_local_notifications: ^19.0.0
@@ -79,7 +81,6 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

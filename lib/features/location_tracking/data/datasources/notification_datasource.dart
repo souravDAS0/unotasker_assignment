@@ -21,14 +21,20 @@ abstract class NotificationDataSource {
 /// Implementation of NotificationDataSource using flutter_local_notifications.
 class NotificationDataSourceImpl implements NotificationDataSource {
   final FlutterLocalNotificationsPlugin plugin;
+  final bool skipPermissions;
 
-  NotificationDataSourceImpl({required this.plugin});
+  NotificationDataSourceImpl({
+    required this.plugin,
+    this.skipPermissions = false,
+  });
 
   @override
   Future<void> initialize() async {
     try {
       // Android initialization settings
-      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const androidSettings = AndroidInitializationSettings(
+        '@mipmap/ic_launcher',
+      );
 
       // iOS initialization settings
       const iosSettings = DarwinInitializationSettings(
@@ -58,13 +64,20 @@ class NotificationDataSourceImpl implements NotificationDataSource {
       );
 
       await plugin
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
           ?.createNotificationChannel(androidChannel);
 
-      // Request permissions for Android 13+
-      await plugin
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.requestNotificationsPermission();
+      // Request permissions for Android 13+ (only in main isolate)
+      // Skip this in background service isolate where Activity context is unavailable
+      if (!skipPermissions) {
+        await plugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >()
+            ?.requestNotificationsPermission();
+      }
     } catch (e) {
       throw NotificationException('Failed to initialize notifications', e);
     }

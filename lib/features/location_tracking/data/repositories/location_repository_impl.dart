@@ -1,4 +1,5 @@
 import 'package:permission_handler/permission_handler.dart';
+import 'package:unotasker_assignment/core/utils/date_formatter.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/exceptions.dart';
@@ -7,7 +8,7 @@ import '../../domain/repositories/location_repository.dart';
 import '../datasources/location_local_datasource.dart';
 import '../datasources/location_remote_datasource.dart';
 import '../datasources/notification_datasource.dart';
-import '../datasources/workmanager_datasource.dart';
+import '../datasources/background_service_datasource.dart';
 import '../models/location_record_model.dart';
 
 /// Implementation of LocationRepository that coordinates all data sources.
@@ -15,13 +16,13 @@ class LocationRepositoryImpl implements LocationRepository {
   final LocationLocalDataSource localDataSource;
   final LocationRemoteDataSource remoteDataSource;
   final NotificationDataSource notificationDataSource;
-  final WorkManagerDataSource workManagerDataSource;
+  final BackgroundServiceDataSource? backgroundServiceDataSource;
 
   LocationRepositoryImpl({
     required this.localDataSource,
     required this.remoteDataSource,
     required this.notificationDataSource,
-    required this.workManagerDataSource,
+    this.backgroundServiceDataSource,
   });
 
   @override
@@ -55,10 +56,7 @@ class LocationRepositoryImpl implements LocationRepository {
   Future<Map<String, double>> getCurrentLocation() async {
     try {
       final position = await remoteDataSource.getCurrentLocation();
-      return {
-        'latitude': position.latitude,
-        'longitude': position.longitude,
-      };
+      return {'latitude': position.latitude, 'longitude': position.longitude};
     } catch (e) {
       if (e is LocationException) {
         rethrow;
@@ -118,7 +116,8 @@ class LocationRepositoryImpl implements LocationRepository {
   @override
   Future<void> showNotification(LocationRecord record) async {
     try {
-      final title = AppConstants.trackingActiveTitle;
+      final title =
+          '${AppConstants.trackingActiveTitle} - ${DateFormatter.formatTimeOnly(record.timestamp)}';
       final body = _formatNotificationBody(record);
       await notificationDataSource.showNotification(title, body);
     } catch (e) {
@@ -132,7 +131,8 @@ class LocationRepositoryImpl implements LocationRepository {
   @override
   Future<void> updateNotification(LocationRecord record) async {
     try {
-      final title = AppConstants.trackingActiveTitle;
+      final title =
+          '${AppConstants.trackingActiveTitle} - ${DateFormatter.formatTimeOnly(record.timestamp)}';
       final body = _formatNotificationBody(record);
       await notificationDataSource.updateNotification(title, body);
     } catch (e) {
@@ -157,8 +157,14 @@ class LocationRepositoryImpl implements LocationRepository {
 
   @override
   Future<void> startBackgroundService() async {
+    if (backgroundServiceDataSource == null) {
+      throw BackgroundServiceException(
+        'Background service data source not available',
+        null,
+      );
+    }
     try {
-      await workManagerDataSource.registerPeriodicTask();
+      await backgroundServiceDataSource!.startPeriodicTracking();
     } catch (e) {
       if (e is BackgroundServiceException) {
         rethrow;
@@ -169,13 +175,37 @@ class LocationRepositoryImpl implements LocationRepository {
 
   @override
   Future<void> stopBackgroundService() async {
+    if (backgroundServiceDataSource == null) {
+      throw BackgroundServiceException(
+        'Background service data source not available',
+        null,
+      );
+    }
     try {
-      await workManagerDataSource.cancelTask();
+      await backgroundServiceDataSource!.stopPeriodicTracking();
     } catch (e) {
       if (e is BackgroundServiceException) {
         rethrow;
       }
       throw BackgroundServiceException('Failed to stop background service', e);
+    }
+  }
+
+  @override
+  Future<bool> checkServiceStatus() async {
+    if (backgroundServiceDataSource == null) {
+      throw BackgroundServiceException(
+        'Background service data source not available',
+        null,
+      );
+    }
+    try {
+      return await backgroundServiceDataSource!.isServiceRunning();
+    } catch (e) {
+      if (e is BackgroundServiceException) {
+        rethrow;
+      }
+      throw BackgroundServiceException('Failed to check service status', e);
     }
   }
 

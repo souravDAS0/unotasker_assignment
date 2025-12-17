@@ -8,14 +8,14 @@ class DateFormatter {
   /// Example: "Dec 17, 2025 - 10:30 AM"
   static String formatTimestamp(DateTime dateTime) {
     final datePart = DateFormat('MMM dd, yyyy').format(dateTime);
-    final timePart = DateFormat('hh:mm a').format(dateTime);
+    final timePart = DateFormat('hh:mm:ss a').format(dateTime);
     return '$datePart - $timePart';
   }
 
   /// Formats a DateTime to show only the time.
   /// Example: "10:30 AM"
   static String formatTimeOnly(DateTime dateTime) {
-    return DateFormat('hh:mm a').format(dateTime);
+    return DateFormat('hh:mm:ss a').format(dateTime);
   }
 
   /// Formats a DateTime to show only the date.

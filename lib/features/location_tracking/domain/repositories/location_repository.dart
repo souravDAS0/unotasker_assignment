@@ -1,6 +1,5 @@
 import '../entities/location_record.dart';
 
-
 abstract class LocationRepository {
   /// Requests location permissions from the user.
   /// Returns true if permissions are granted, false otherwise.
@@ -43,4 +42,8 @@ abstract class LocationRepository {
 
   /// Stops the background service and cancels periodic location tracking.
   Future<void> stopBackgroundService();
+
+  /// Checks if the background service is currently running.
+  /// Returns true if active, false otherwise.
+  Future<bool> checkServiceStatus();
 }

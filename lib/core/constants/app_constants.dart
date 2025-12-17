@@ -14,10 +14,12 @@ class AppConstants {
 
   // Hive Configuration
   static const String locationBoxName = 'location_records';
-  static const int locationRecordTypeId = 0;
 
-  // WorkManager Configuration
-  static const String trackingTaskName = 'location_tracking_task';
+  // Background Service Configuration
+  static const String notificationServiceChannelId = 'location_service_channel';
+  static const String notificationServiceChannelName = 'Location Service';
+  static const String notificationServiceChannelDescription =
+      'Keeps the location tracking service running in the background';
 
   // UI Messages
   static const String trackingActiveTitle = 'Location Tracking Active';

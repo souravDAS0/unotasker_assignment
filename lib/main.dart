@@ -1,101 +1,176 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:workmanager/workmanager.dart';
+import 'package:unotasker_assignment/core/utils/date_formatter.dart';
 
 import 'core/constants/app_constants.dart';
 import 'features/location_tracking/data/datasources/location_local_datasource.dart';
 import 'features/location_tracking/data/datasources/location_remote_datasource.dart';
 import 'features/location_tracking/data/datasources/notification_datasource.dart';
-import 'features/location_tracking/data/datasources/workmanager_datasource.dart';
-import 'features/location_tracking/data/models/location_record_model.dart';
 import 'features/location_tracking/data/repositories/location_repository_impl.dart';
 import 'features/location_tracking/domain/usecases/update_location.dart';
 import 'features/location_tracking/presentation/screens/dashboard_screen.dart';
 
 // ============================================================================
-// MAIN ENTRY POINT
+// BACKGROUND SERVICE ENTRY POINT
 // ============================================================================
 
-/// Background task callback for WorkManager.
+/// Background service callback for flutter_background_service.
 /// MUST be top-level function or static method.
 /// Cannot use Riverpod in background isolate - manual dependency injection required.
 @pragma('vm:entry-point')
-void workmanagerCallbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    try {
-      print('[WorkManager] Background task started: $task');
+void onStart(ServiceInstance service) async {
+  // Only for Android: ensure the plugin is initialized
+  DartPluginRegistrant.ensureInitialized();
 
-      // ========================================================================
-      // HIVE INITIALIZATION IN BACKGROUND ISOLATE
-      // ========================================================================
-      await Hive.initFlutter();
-      Hive.registerAdapter(LocationRecordModelAdapter());
-      final box = await Hive.openBox<LocationRecordModel>(
-        AppConstants.locationBoxName,
+  // For Android: Set up foreground service
+  if (service is AndroidServiceInstance) {
+    service.on('setAsForeground').listen((event) {
+      service.setAsForegroundService();
+    });
+
+    service.on('setAsBackground').listen((event) {
+      service.setAsBackgroundService();
+    });
+  }
+
+  // Listen for stop service command
+  service.on('stopService').listen((event) {
+    print('[BackgroundService] Stop command received');
+    service.stopSelf();
+  });
+
+  print('[BackgroundService] Service started');
+
+  // ========================================================================
+  // HIVE INITIALIZATION IN BACKGROUND ISOLATE
+  // ========================================================================
+  await Hive.initFlutter();
+  // Use string-based box for JSON storage (better cross-isolate compatibility)
+  await Hive.openBox<String>(AppConstants.locationBoxName);
+  print('[BackgroundService] Hive box opened successfully');
+  // ========================================================================
+  // MANUAL DEPENDENCY INJECTION (No Riverpod in isolate)
+  // ========================================================================
+  final localDataSource = LocationLocalDataSourceImpl();
+  final remoteDataSource = LocationRemoteDataSourceImpl();
+  final notificationDataSource = NotificationDataSourceImpl(
+    plugin: FlutterLocalNotificationsPlugin(),
+    skipPermissions: true, // Skip permission requests in background isolate
+  );
+
+  // Initialize notification plugin
+  try {
+    await notificationDataSource.initialize();
+    print('[BackgroundService] Notifications initialized');
+  } catch (e) {
+    print('[BackgroundService] Notification initialization failed: $e');
+  }
+
+  final repository = LocationRepositoryImpl(
+    localDataSource: localDataSource,
+    remoteDataSource: remoteDataSource,
+    notificationDataSource: notificationDataSource,
+  );
+
+  final updateLocation = UpdateLocation(repository: repository);
+
+  // ========================================================================
+  // PERIODIC TIMER FOR LOCATION TRACKING
+  // ========================================================================
+  Timer.periodic(AppConstants.trackingInterval, (timer) async {
+    if (service is AndroidServiceInstance) {
+      if (await service.isForegroundService()) {
+        print(
+          '[BackgroundService] Timer tick - Interval: ${AppConstants.trackingInterval.inSeconds}s',
+        );
+
+        // Execute location update
+        final result = await updateLocation();
+
+        result.fold(
+          (failure) {
+            print(
+              '[BackgroundService] Location update failed: ${failure.message}',
+            );
+          },
+          (_) {
+            print('[BackgroundService] Location update completed successfully');
+            // Notify main isolate that a new record was saved
+            service.invoke('record_saved');
+          },
+        );
+
+        // Update foreground notification (optional)
+        service.setForegroundNotificationInfo(
+          title: AppConstants.trackingActiveTitle,
+          content:
+              'Last updated:  ${DateFormatter.formatTimeOnly(DateTime.now())}',
+        );
+      } else {
+        // Service is not in foreground mode anymore, stop the timer
+        timer.cancel();
+        service.stopSelf();
+      }
+    } else {
+      // iOS or service status check
+      print(
+        '[BackgroundService] Timer tick - Interval: ${AppConstants.trackingInterval.inSeconds}s',
       );
 
-      // ========================================================================
-      // MANUAL DEPENDENCY INJECTION (No Riverpod in isolate)
-      // ========================================================================
-      final localDataSource = LocationLocalDataSourceImpl(hiveBox: box);
-      final remoteDataSource = LocationRemoteDataSourceImpl();
-      final notificationDataSource = NotificationDataSourceImpl(
-        plugin: FlutterLocalNotificationsPlugin(),
-      );
-      final workManagerDataSource = WorkManagerDataSourceImpl();
-
-      final repository = LocationRepositoryImpl(
-        localDataSource: localDataSource,
-        remoteDataSource: remoteDataSource,
-        notificationDataSource: notificationDataSource,
-        workManagerDataSource: workManagerDataSource,
-      );
-
-      // ========================================================================
-      // EXECUTE UPDATE LOCATION USE CASE
-      // ========================================================================
-      final updateLocation = UpdateLocation(repository: repository);
+      // Execute location update
       final result = await updateLocation();
 
       result.fold(
         (failure) {
-          print('[WorkManager] Background task failed: ${failure.message}');
+          print(
+            '[BackgroundService] Location update failed: ${failure.message}',
+          );
         },
         (_) {
-          print('[WorkManager] Background task completed successfully');
+          print('[BackgroundService] Location update completed successfully');
+          // Notify main isolate that a new record was saved
+          service.invoke('record_saved');
         },
       );
-
-      // ========================================================================
-      // RESCHEDULE FOR TESTING (only if interval < 15 minutes)
-      // ========================================================================
-      // WorkManager's minimum periodic frequency is 15 minutes.
-      // For testing with shorter intervals, we use one-off tasks that reschedule themselves.
-      if (AppConstants.trackingInterval.inMinutes < 15) {
-        print('[WorkManager] Rescheduling next task in ${AppConstants.trackingInterval.inSeconds} seconds');
-        await workManagerDataSource.registerPeriodicTask();
-      }
-
-      return true;
-    } catch (e, stackTrace) {
-      print('[WorkManager] Background task error: $e');
-      print('[WorkManager] Stack trace: $stackTrace');
-      return false;
     }
   });
+
+  print(
+    '[BackgroundService] Periodic timer started with ${AppConstants.trackingInterval.inSeconds}s interval',
+  );
 }
+
+/// iOS background entry point.
+@pragma('vm:entry-point')
+Future<bool> onIosBackground(ServiceInstance service) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
+  return true;
+}
+
+// ============================================================================
+// MAIN ENTRY POINT
+// ============================================================================
 
 void main() async {
   // Ensure Flutter bindings are initialized
   WidgetsFlutterBinding.ensureInitialized();
 
+  // ============================================================================
+  // HIVE INITIALIZATION (Main Isolate)
+  // ============================================================================
   await Hive.initFlutter();
-  Hive.registerAdapter(LocationRecordModelAdapter());
+  await Hive.openBox<String>(AppConstants.locationBoxName);
 
-  await Hive.openBox<LocationRecordModel>(AppConstants.locationBoxName);
-
+  // ============================================================================
+  // NOTIFICATION INITIALIZATION (Main Isolate)
+  // ============================================================================
   final notificationPlugin = FlutterLocalNotificationsPlugin();
   final notificationDataSource = NotificationDataSourceImpl(
     plugin: notificationPlugin,
@@ -109,19 +184,66 @@ void main() async {
   }
 
   // ============================================================================
-  // WORKMANAGER INITIALIZATION
+  // CREATE BACKGROUND SERVICE NOTIFICATION CHANNEL
   // ============================================================================
-  await Workmanager().initialize(
-    workmanagerCallbackDispatcher,
-    isInDebugMode: true, // Set to false for release
-  );
+  // CRITICAL: This channel MUST be created before starting the background service
+  // Otherwise, the foreground service will crash with CannotPostForegroundServiceNotificationException
+  try {
+    final androidPlugin = notificationPlugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
 
-  print('[Main] WorkManager initialized');
+    if (androidPlugin != null) {
+      const serviceChannel = AndroidNotificationChannel(
+        AppConstants.notificationServiceChannelId,
+        AppConstants.notificationServiceChannelName,
+        description: AppConstants.notificationServiceChannelDescription,
+        importance: Importance.high,
+        playSound: false,
+        enableVibration: false,
+        showBadge: false,
+      );
+
+      await androidPlugin.createNotificationChannel(serviceChannel);
+      print('[Main] Background service notification channel created');
+    }
+  } catch (e) {
+    print('[Main] Failed to create service notification channel: $e');
+  }
+
+  // ============================================================================
+  // BACKGROUND SERVICE INITIALIZATION
+  // ============================================================================
+  await initializeBackgroundService();
+
+  print('[Main] Background service initialized');
 
   // ============================================================================
   // RUN APP
   // ============================================================================
   runApp(const ProviderScope(child: MyApp()));
+}
+
+/// Initializes the flutter_background_service.
+Future<void> initializeBackgroundService() async {
+  final service = FlutterBackgroundService();
+
+  await service.configure(
+    iosConfiguration: IosConfiguration(
+      autoStart: false,
+      onForeground: onStart,
+      onBackground: onIosBackground,
+    ),
+    androidConfiguration: AndroidConfiguration(
+      autoStart: false,
+      onStart: onStart,
+      isForegroundMode: true,
+      notificationChannelId: AppConstants.notificationServiceChannelId,
+      initialNotificationTitle: AppConstants.notificationServiceChannelName,
+      initialNotificationContent: 'Keeps the location tracking service running',
+    ),
+  );
 }
 
 // ============================================================================
