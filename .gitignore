@@ -44,7 +44,16 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Hive generated files
+*.g.dart
+*.hive
+
+# Build runner cache
+.build_runner_cache/
+
 Flutter_Assignment_SOW.md
 CLAUDE.md
+Notes.md
+Tasks.md
 
 .env
