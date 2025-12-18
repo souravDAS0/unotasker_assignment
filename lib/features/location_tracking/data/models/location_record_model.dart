@@ -4,7 +4,6 @@ import '../../domain/entities/location_record.dart';
 
 /// Data model for LocationRecord with JSON serialization.
 /// Extends the domain entity and adds serialization capabilities.
-/// Uses JSON instead of Hive TypeAdapter for better cross-isolate compatibility.
 class LocationRecordModel extends LocationRecord {
   @override
   final DateTime timestamp;

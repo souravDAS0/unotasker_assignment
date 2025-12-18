@@ -10,9 +10,6 @@ import '../../domain/usecases/stop_tracking.dart';
 import '../../domain/usecases/check_tracking_status.dart';
 import '../state/tracking_state.dart';
 
-/// StateNotifier for managing tracking state and actions.
-/// Handles starting/stopping tracking and loading location records.
-/// Uses FlutterBackgroundService messaging for real-time updates when records are saved.
 class TrackingNotifier extends StateNotifier<TrackingState> {
   final StartTracking startTracking;
   final StopTracking stopTracking;

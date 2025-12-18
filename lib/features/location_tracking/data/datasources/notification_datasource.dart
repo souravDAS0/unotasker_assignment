@@ -94,16 +94,16 @@ class NotificationDataSourceImpl implements NotificationDataSource {
         priority: Priority.high,
         ongoing: true, // Non-dismissible
         autoCancel: false,
-        playSound: false,
-        enableVibration: false,
-        // Foreground service notification
-        category: AndroidNotificationCategory.service,
+        playSound: true,
+        enableVibration: true,
+        category: AndroidNotificationCategory.locationSharing,
       );
 
       const iosDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
-        presentSound: false,
+        presentSound: true,
+        interruptionLevel: InterruptionLevel.active,
       );
 
       const notificationDetails = NotificationDetails(

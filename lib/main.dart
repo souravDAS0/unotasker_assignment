@@ -243,7 +243,7 @@ Future<void> initializeBackgroundService() async {
       notificationChannelId: AppConstants.notificationServiceChannelId,
       initialNotificationTitle: AppConstants.trackingActiveTitle,
       initialNotificationContent: AppConstants.trackingActiveBody,
-      // foregroundServiceTypes: [AndroidForegroundType.location],
+      foregroundServiceTypes: [AndroidForegroundType.location],
     ),
   );
 }
