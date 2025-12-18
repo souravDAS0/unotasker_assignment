@@ -29,4 +29,28 @@ class DateFormatter {
   static String formatCompact(DateTime dateTime) {
     return DateFormat('MM/dd/yy hh:mm a').format(dateTime);
   }
+
+  /// Formats a DateTime to show relative time (e.g., "2m ago", "1h ago").
+  /// Useful for showing how long ago a location was recorded.
+  ///
+  /// Examples:
+  /// - Less than 1 minute: "Just now"
+  /// - 1-59 minutes: "2m ago", "45m ago"
+  static String getRelativeTime(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inSeconds < 60) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    } else {
+      final weeks = (difference.inDays / 7).floor();
+      return '${weeks}w ago';
+    }
+  }
 }
