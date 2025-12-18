@@ -6,7 +6,6 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:unotasker_assignment/core/utils/date_formatter.dart';
 
 import 'core/constants/app_constants.dart';
 import 'features/location_tracking/data/datasources/location_local_datasource.dart';
@@ -99,18 +98,17 @@ void onStart(ServiceInstance service) async {
               '[BackgroundService] Location update failed: ${failure.message}',
             );
           },
-          (_) {
+          (locationRecord) {
             print('[BackgroundService] Location update completed successfully');
+
             // Notify main isolate that a new record was saved
             service.invoke('record_saved');
           },
         );
 
-        // Update foreground notification (optional)
         service.setForegroundNotificationInfo(
           title: AppConstants.trackingActiveTitle,
-          content:
-              'Last updated:  ${DateFormatter.formatTimeOnly(DateTime.now())}',
+          content: AppConstants.trackingActiveBody,
         );
       } else {
         // Service is not in foreground mode anymore, stop the timer
@@ -132,8 +130,11 @@ void onStart(ServiceInstance service) async {
             '[BackgroundService] Location update failed: ${failure.message}',
           );
         },
-        (_) {
+        (locationRecord) {
           print('[BackgroundService] Location update completed successfully');
+          print(
+            '[BackgroundService] Location: ${locationRecord.address} at ${locationRecord.timestamp}',
+          );
           // Notify main isolate that a new record was saved
           service.invoke('record_saved');
         },
@@ -240,8 +241,9 @@ Future<void> initializeBackgroundService() async {
       onStart: onStart,
       isForegroundMode: true,
       notificationChannelId: AppConstants.notificationServiceChannelId,
-      initialNotificationTitle: AppConstants.notificationServiceChannelName,
-      initialNotificationContent: 'Keeps the location tracking service running',
+      initialNotificationTitle: AppConstants.trackingActiveTitle,
+      initialNotificationContent: AppConstants.trackingActiveBody,
+      // foregroundServiceTypes: [AndroidForegroundType.location],
     ),
   );
 }

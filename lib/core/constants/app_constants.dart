@@ -22,7 +22,10 @@ class AppConstants {
       'Keeps the location tracking service running in the background';
 
   // UI Messages
+
   static const String trackingActiveTitle = 'Location Tracking Active';
+  static const String trackingActiveBody =
+      'Your location is being tracked in the background every 5 minutes.';
   static const String addressUnavailable = 'Address unavailable';
 
   // Error Messages

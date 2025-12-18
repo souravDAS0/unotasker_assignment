@@ -14,8 +14,8 @@ class UpdateLocation {
   UpdateLocation({required this.repository});
 
   /// Executes the background location update flow.
-  /// Returns Right(void) on success or Left(Failure) on error.
-  Future<Either<Failure, void>> call() async {
+  /// Returns Right(LocationRecord) on success or Left(Failure) on error.
+  Future<Either<Failure, LocationRecord>> call() async {
     try {
       // Step 1: Check if we have permissions
       final hasPermissions = await repository.hasPermissions();
@@ -43,7 +43,7 @@ class UpdateLocation {
       // Step 5: Update notification with new data
       await repository.updateNotification(record);
 
-      return const Right(null);
+      return Right(record);
     } on PermissionException catch (e) {
       return Left(PermissionFailure(e.message));
     } on LocationException catch (e) {
@@ -55,7 +55,9 @@ class UpdateLocation {
     } on NotificationException catch (e) {
       return Left(NotificationFailure(e.message));
     } catch (e) {
-      return Left(LocationFailure('Failed to update location: ${e.toString()}'));
+      return Left(
+        LocationFailure('Failed to update location: ${e.toString()}'),
+      );
     }
   }
 }
