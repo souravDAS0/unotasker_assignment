@@ -2,8 +2,8 @@ class AppConstants {
   AppConstants._();
 
   // Tracking Configuration
-  // static const Duration trackingInterval = Duration(minutes: 5);
-  static const Duration trackingInterval = Duration(seconds: 30);
+  static const Duration trackingInterval = Duration(minutes: 5);
+  // static const Duration trackingInterval = Duration(seconds: 30);
 
   // Notification Configuration
   static const int notificationId = 1000;

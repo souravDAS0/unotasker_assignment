@@ -60,9 +60,11 @@ class DashboardScreen extends ConsumerWidget {
                     label: 'Start Tracking',
                     onPressed: state.isTracking || state.isLoading
                         ? null
-                        : () => ref.read(trackingProvider.notifier).startTrackingAction(),
+                        : () => ref
+                              .read(trackingProvider.notifier)
+                              .startTrackingAction(),
                     isLoading: state.isLoading && !state.isTracking,
-                    color: Colors.green,
+                    color: Colors.blueAccent,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -71,7 +73,9 @@ class DashboardScreen extends ConsumerWidget {
                     label: 'Stop Tracking',
                     onPressed: !state.isTracking || state.isLoading
                         ? null
-                        : () => ref.read(trackingProvider.notifier).stopTrackingAction(),
+                        : () => ref
+                              .read(trackingProvider.notifier)
+                              .stopTrackingAction(),
                     isLoading: state.isLoading && state.isTracking,
                     color: Colors.red,
                   ),
@@ -107,7 +111,8 @@ class DashboardScreen extends ConsumerWidget {
                     icon: const Icon(Icons.close),
                     iconSize: 20,
                     color: Colors.red.shade700,
-                    onPressed: () => ref.read(trackingProvider.notifier).clearError(),
+                    onPressed: () =>
+                        ref.read(trackingProvider.notifier).clearError(),
                   ),
                 ],
               ),
