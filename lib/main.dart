@@ -200,7 +200,7 @@ void main() async {
         AppConstants.notificationServiceChannelId,
         AppConstants.notificationServiceChannelName,
         description: AppConstants.notificationServiceChannelDescription,
-        importance: Importance.high,
+        importance: Importance.low,
         playSound: false,
         enableVibration: false,
         showBadge: false,
