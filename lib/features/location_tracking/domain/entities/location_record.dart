@@ -36,19 +36,4 @@ class LocationRecord {
   String toString() {
     return 'LocationRecord(timestamp: $timestamp, latitude: $latitude, longitude: $longitude, address: $address)';
   }
-
-  /// Creates a copy of this LocationRecord with the given fields replaced.
-  LocationRecord copyWith({
-    DateTime? timestamp,
-    double? latitude,
-    double? longitude,
-    String? address,
-  }) {
-    return LocationRecord(
-      timestamp: timestamp ?? this.timestamp,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
-      address: address ?? this.address,
-    );
-  }
 }

@@ -130,7 +130,6 @@ class TrackingNotifier extends StateNotifier<TrackingState> {
   /// Called after starting tracking and on initialization.
   Future<void> loadRecords() async {
     final result = await getLocationRecords();
-    // print(result);
 
     result.fold(
       (failure) {
@@ -165,16 +164,6 @@ class TrackingNotifier extends StateNotifier<TrackingState> {
           loadRecords();
         }
       });
-
-      // // Start fallback timer (10 seconds) in case messages are missed
-      // _fallbackTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-      //   if (state.isTracking) {
-      //     print('[TrackingNotifier] Fallback timer - checking for new records');
-      //     loadRecords();
-      //   } else {
-      //     _stopServiceListener();
-      //   }
-      // });
 
       print(
         '[TrackingNotifier] Service message listener and fallback timer started',

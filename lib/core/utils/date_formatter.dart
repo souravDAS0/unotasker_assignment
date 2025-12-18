@@ -18,18 +18,6 @@ class DateFormatter {
     return DateFormat('hh:mm:ss a').format(dateTime);
   }
 
-  /// Formats a DateTime to show only the date.
-  /// Example: "Dec 17, 2025"
-  static String formatDateOnly(DateTime dateTime) {
-    return DateFormat('MMM dd, yyyy').format(dateTime);
-  }
-
-  /// Formats a DateTime to a compact format.
-  /// Example: "12/17/25 10:30 AM"
-  static String formatCompact(DateTime dateTime) {
-    return DateFormat('MM/dd/yy hh:mm a').format(dateTime);
-  }
-
   /// Formats a DateTime to show relative time (e.g., "2m ago", "1h ago").
   /// Useful for showing how long ago a location was recorded.
   ///

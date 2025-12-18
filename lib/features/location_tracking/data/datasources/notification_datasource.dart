@@ -50,7 +50,7 @@ class NotificationDataSourceImpl implements NotificationDataSource {
 
       await plugin.initialize(
         initializationSettings,
-        onDidReceiveNotificationResponse: _onNotificationTapped,
+        onDidReceiveNotificationResponse: null,
       );
 
       // Create Android notification channel (HIGH priority for foreground service)
@@ -135,13 +135,5 @@ class NotificationDataSourceImpl implements NotificationDataSource {
     } catch (e) {
       throw NotificationException('Failed to clear notification', e);
     }
-  }
-
-  /// Handles notification tap events.
-  /// Can be extended to handle stop tracking from notification action.
-  void _onNotificationTapped(NotificationResponse response) {
-    // Handle notification tap
-    // For now, this just logs the tap
-    // In the future, can add "Stop Tracking" action button handling
   }
 }

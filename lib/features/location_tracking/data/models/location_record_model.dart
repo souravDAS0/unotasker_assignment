@@ -8,13 +8,10 @@ import '../../domain/entities/location_record.dart';
 class LocationRecordModel extends LocationRecord {
   @override
   final DateTime timestamp;
-
   @override
   final double latitude;
-
   @override
   final double longitude;
-
   @override
   final String address;
 
