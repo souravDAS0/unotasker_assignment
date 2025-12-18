@@ -1,3 +1,4 @@
+import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:unotasker_assignment/core/utils/date_formatter.dart';
 
@@ -5,10 +6,10 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../domain/entities/location_record.dart';
 import '../../domain/repositories/location_repository.dart';
+import '../datasources/background_service_datasource.dart';
 import '../datasources/location_local_datasource.dart';
 import '../datasources/location_remote_datasource.dart';
 import '../datasources/notification_datasource.dart';
-import '../datasources/background_service_datasource.dart';
 import '../models/location_record_model.dart';
 
 /// Implementation of LocationRepository that coordinates all data sources.
@@ -28,20 +29,26 @@ class LocationRepositoryImpl implements LocationRepository {
   @override
   Future<bool> requestPermissions() async {
     try {
-      // Request location permission
-      var locationStatus = await Permission.location.request();
+      // Check current permission status
+      LocationPermission permission = await Geolocator.checkPermission();
 
-      if (locationStatus.isGranted) {
-        // Request background location permission if on Android
-        var backgroundStatus = await Permission.locationAlways.request();
-
-        // Also request notification permission for Android 13+
-        await Permission.notification.request();
-
-        return backgroundStatus.isGranted || backgroundStatus.isLimited;
+      // If denied, request permission
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
       }
 
-      return false;
+      // If still denied or permanently denied, return false
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return false;
+      }
+
+      // Request notification permission for Android 13+
+      await Permission.notification.request();
+
+      // Return true if we have whileInUse or always permission
+      return permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always;
     } catch (e) {
       throw PermissionException('Failed to request permissions', e);
     }
@@ -117,7 +124,7 @@ class LocationRepositoryImpl implements LocationRepository {
   Future<void> showNotification(LocationRecord record) async {
     try {
       final title =
-          '${AppConstants.trackingActiveTitle} - ${DateFormatter.formatTimeOnly(record.timestamp)}';
+          'Tracking started @ ${DateFormatter.formatTimeOnly(record.timestamp)}';
       final body = _formatNotificationBody(record);
       await notificationDataSource.showNotification(title, body);
     } catch (e) {
@@ -132,7 +139,7 @@ class LocationRepositoryImpl implements LocationRepository {
   Future<void> updateNotification(LocationRecord record) async {
     try {
       final title =
-          '${AppConstants.trackingActiveTitle} - ${DateFormatter.formatTimeOnly(record.timestamp)}';
+          'Continuing tracking @ ${DateFormatter.formatTimeOnly(record.timestamp)}';
       final body = _formatNotificationBody(record);
       await notificationDataSource.updateNotification(title, body);
     } catch (e) {
@@ -211,6 +218,6 @@ class LocationRepositoryImpl implements LocationRepository {
 
   /// Formats the notification body with location data.
   String _formatNotificationBody(LocationRecord record) {
-    return '${record.address}\nLat: ${record.latitude.toStringAsFixed(6)}, Lng: ${record.longitude.toStringAsFixed(6)}';
+    return 'Lat: ${record.latitude.toStringAsFixed(6)}, Lng: ${record.longitude.toStringAsFixed(6)}\n${record.address}';
   }
 }
