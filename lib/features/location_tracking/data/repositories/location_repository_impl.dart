@@ -1,9 +1,12 @@
+import 'dart:developer' as developer;
+
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:unotasker_assignment/core/utils/date_formatter.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/exceptions.dart';
+import '../../domain/entities/geocoding_error_type.dart';
 import '../../domain/entities/location_record.dart';
 import '../../domain/repositories/location_repository.dart';
 import '../datasources/background_service_datasource.dart';
@@ -73,12 +76,31 @@ class LocationRepositoryImpl implements LocationRepository {
   }
 
   @override
-  Future<String> geocodeLocation(double latitude, double longitude) async {
+  Future<(String, GeocodingErrorType?)> geocodeLocation(
+      double latitude, double longitude) async {
     try {
-      return await remoteDataSource.geocodeAddress(latitude, longitude);
+      final address =
+          await remoteDataSource.geocodeAddress(latitude, longitude);
+      return (address, null); // Success - no error
+    } on GeocodingException catch (e) {
+      developer.log(
+        'Geocoding failed in repository',
+        name: 'LocationRepositoryImpl',
+        error: e,
+      );
+      // Return fallback address WITH error type
+      return (
+        AppConstants.addressUnavailable,
+        e.errorType as GeocodingErrorType?
+      );
     } catch (e) {
-      // Return fallback address instead of throwing
-      return AppConstants.addressUnavailable;
+      // Unexpected error - log and return unknown error type
+      developer.log(
+        'Unexpected error during geocoding',
+        name: 'LocationRepositoryImpl',
+        error: e,
+      );
+      return (AppConstants.addressUnavailable, GeocodingErrorType.unknown);
     }
   }
 

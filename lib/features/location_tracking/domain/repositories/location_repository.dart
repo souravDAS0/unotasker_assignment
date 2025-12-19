@@ -1,3 +1,4 @@
+import '../entities/geocoding_error_type.dart';
 import '../entities/location_record.dart';
 
 abstract class LocationRepository {
@@ -14,8 +15,10 @@ abstract class LocationRepository {
   Future<Map<String, double>> getCurrentLocation();
 
   /// Converts GPS coordinates to a human-readable address.
-  /// Returns the formatted address string or 'Address unavailable' on failure.
-  Future<String> geocodeLocation(double latitude, double longitude);
+  /// Returns a tuple: (address string, error type if failed or null if successful).
+  /// The error type indicates what kind of geocoding failure occurred.
+  Future<(String, GeocodingErrorType?)> geocodeLocation(
+      double latitude, double longitude);
 
   /// Saves a location record to local storage.
   Future<void> saveRecord(LocationRecord record);

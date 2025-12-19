@@ -52,8 +52,11 @@ class BackgroundServiceException extends AppException {
 
 /// Exception thrown when geocoding operations fail.
 class GeocodingException extends AppException {
-  const GeocodingException(super.message, [super.cause]);
+  final Object? errorType;
+
+  const GeocodingException(super.message, this.errorType, [super.cause]);
 
   @override
-  String toString() => 'GeocodingException: $message${cause != null ? ' (Cause: $cause)' : ''}';
+  String toString() =>
+      'GeocodingException[$errorType]: $message${cause != null ? ' (Cause: $cause)' : ''}';
 }

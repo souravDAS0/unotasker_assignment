@@ -28,15 +28,17 @@ class UpdateLocation {
       final latitude = locationData['latitude']!;
       final longitude = locationData['longitude']!;
 
-      // Step 3: Geocode to address
-      final address = await repository.geocodeLocation(latitude, longitude);
+      // Step 3: Geocode to address (returns tuple with error type)
+      final (address, errorType) =
+          await repository.geocodeLocation(latitude, longitude);
 
-      // Step 4: Create and save record
+      // Step 4: Create and save record (includes error state)
       final record = LocationRecord(
         timestamp: DateTime.now(),
         latitude: latitude,
         longitude: longitude,
         address: address,
+        geocodingError: errorType,
       );
       await repository.saveRecord(record);
 
@@ -48,8 +50,6 @@ class UpdateLocation {
       return Left(PermissionFailure(e.message));
     } on LocationException catch (e) {
       return Left(LocationFailure(e.message));
-    } on GeocodingException catch (e) {
-      return Left(GeocodingFailure(e.message));
     } on StorageException catch (e) {
       return Left(StorageFailure(e.message));
     } on NotificationException catch (e) {

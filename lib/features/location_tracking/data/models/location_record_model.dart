@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../domain/entities/geocoding_error_type.dart';
 import '../../domain/entities/location_record.dart';
 
 /// Data model for LocationRecord with JSON serialization.
@@ -13,17 +14,21 @@ class LocationRecordModel extends LocationRecord {
   final double longitude;
   @override
   final String address;
+  @override
+  final GeocodingErrorType? geocodingError;
 
   const LocationRecordModel({
     required this.timestamp,
     required this.latitude,
     required this.longitude,
     required this.address,
+    this.geocodingError,
   }) : super(
          timestamp: timestamp,
          latitude: latitude,
          longitude: longitude,
          address: address,
+         geocodingError: geocodingError,
        );
 
   /// Converts this model to a domain entity.
@@ -33,6 +38,7 @@ class LocationRecordModel extends LocationRecord {
       latitude: latitude,
       longitude: longitude,
       address: address,
+      geocodingError: geocodingError,
     );
   }
 
@@ -43,6 +49,7 @@ class LocationRecordModel extends LocationRecord {
       latitude: entity.latitude,
       longitude: entity.longitude,
       address: entity.address,
+      geocodingError: entity.geocodingError,
     );
   }
 
@@ -53,6 +60,7 @@ class LocationRecordModel extends LocationRecord {
       'latitude': latitude,
       'longitude': longitude,
       'address': address,
+      'geocodingError': geocodingError?.name,
     };
   }
 
@@ -63,6 +71,12 @@ class LocationRecordModel extends LocationRecord {
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
       address: json['address'] as String,
+      geocodingError: json['geocodingError'] != null
+          ? GeocodingErrorType.values.firstWhere(
+              (e) => e.name == json['geocodingError'],
+              orElse: () => GeocodingErrorType.unknown,
+            )
+          : null,
     );
   }
 
@@ -80,6 +94,6 @@ class LocationRecordModel extends LocationRecord {
 
   @override
   String toString() {
-    return 'LocationRecordModel(timestamp: $timestamp, latitude: $latitude, longitude: $longitude, address: $address)';
+    return 'LocationRecordModel(timestamp: $timestamp, latitude: $latitude, longitude: $longitude, address: $address, geocodingError: $geocodingError)';
   }
 }
