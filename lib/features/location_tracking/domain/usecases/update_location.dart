@@ -6,7 +6,7 @@ import '../entities/location_record.dart';
 import '../repositories/location_repository.dart';
 
 /// Use case for updating location in the background.
-/// Called periodically by WorkManager every 5 minutes.
+/// Called periodically by WorkManager every 30 seconds.
 /// Orchestrates the flow: get location → geocode → save → update notification.
 class UpdateLocation {
   final LocationRepository repository;

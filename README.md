@@ -10,7 +10,7 @@ This app was developed as part of the Unotasker Flutter assignment to demonstrat
 
 - Dashboard with Start/Stop tracking controls
 - GPS location fetching with reverse geocoding
-- Local notifications every 5 minutes
+- Local notifications every 30 seconds
 - Persistent data storage using Hive
 - Background service for continuous tracking
 - Clean Architecture with separation of concerns
@@ -30,13 +30,13 @@ This app was developed as part of the Unotasker Flutter assignment to demonstrat
 
 - Fetches current latitude, longitude using `geolocator`
 - Reverse geocodes coordinates to human-readable addresses using `geocoding`
-- Updates every **5 minutes** via background service
+- Updates every **30 seconds** via background service
 - Displays real-time tracking status
 
 ### Local Notifications
 
 - Shows notification on tracking start with initial location
-- Updates notification every 5 minutes with latest location
+- Updates notification every 30 seconds with latest location
 - Persistent notification (non-dismissible during tracking)
 - Displays latitude, longitude, and address in notification body
 
@@ -223,7 +223,7 @@ lib/
 ### Issue 1: WorkManager 15-Minute Minimum Limitation
 
 **Problem:**
-The assignment required location updates every **5 minutes**, but `workmanager` package enforces a **15-minute minimum** for periodic tasks due to Android's battery optimization policies.
+The assignment required location updates every **30 seconds**, but `workmanager` package enforces a **15-minute minimum** for periodic tasks due to Android's battery optimization policies.
 
 **Solution:**
 Migrated to **`flutter_background_service`** which allows running a custom `Timer.periodic` with exact 5-minute intervals. This package enables true foreground service on Android, bypassing the 15-minute restriction.
@@ -361,7 +361,7 @@ Combination of `service.invoke()` messaging (for triggering) + `refreshBox()` ca
 
 ### Background Service Operation
 
-1. Every 5 minutes, `Timer.periodic` triggers
+1. Every 30 seconds, `Timer.periodic` triggers
 2. `UpdateLocation` use case executes in background isolate:
    - Fetches current location
    - Geocodes to address
@@ -428,7 +428,7 @@ Combination of `service.invoke()` messaging (for triggering) + `refreshBox()` ca
 2. Grant all required permissions
 3. Tap **"Start Tracking"**
 4. Observe notification appears with current location
-5. Wait 5 minutes (or use developer options to simulate time)
+5. Wait 30 seconds (or use developer options to simulate time)
 6. Verify notification updates with new location
 7. Open app to see all records in ListView
 
@@ -436,7 +436,7 @@ Combination of `service.invoke()` messaging (for triggering) + `refreshBox()` ca
 
 1. Start tracking
 2. Press Home button (minimize app)
-3. Wait 5 minutes
+3. Wait 30 seconds
 4. Check notification updates
 5. Reopen app - verify new records are visible
 
@@ -497,9 +497,9 @@ Combination of `service.invoke()` messaging (for triggering) + `refreshBox()` ca
 - [✓] Send local notification on start
 - [✓] Notification shows: Lat, Lng, Address
 - [✓] Save data to local storage (Hive)
-- [✓] Continue sending notification every 5 minutes
+- [✓] Continue sending notification every 30 seconds
 - [✓] **BONUS**: Uses `flutter_background_service`
-- [✓] Each 5 minutes: Fetch → Save → Notify
+- [✓] Each 30 seconds: Fetch → Save → Notify
 
 ### OFF Tracking Behavior
 

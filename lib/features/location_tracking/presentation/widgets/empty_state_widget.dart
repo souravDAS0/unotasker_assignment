@@ -86,7 +86,7 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget>
             const SizedBox(height: 12),
 
             const Text(
-              'Start tracking to see location updates every 5 minutes',
+              'Start tracking to see location updates every 30 seconds',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w400,

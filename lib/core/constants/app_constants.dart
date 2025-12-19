@@ -2,7 +2,7 @@ class AppConstants {
   AppConstants._();
 
   // Tracking Configuration
-  static const Duration trackingInterval = Duration(minutes: 5);
+  static const Duration trackingInterval = Duration(seconds: 30);
 
   // Notification Configuration
   static const int notificationId = 1000;
@@ -24,7 +24,7 @@ class AppConstants {
 
   static const String trackingActiveTitle = 'Location Tracking Active';
   static const String trackingActiveBody =
-      'Your location is being tracked in the background every 5 minutes.';
+      'Your location is being tracked in the background every 30 seconds.';
   static const String addressUnavailable = 'Address unavailable';
 
   // Error Messages
