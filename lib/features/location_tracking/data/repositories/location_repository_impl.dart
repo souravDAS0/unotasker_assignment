@@ -1,0 +1,245 @@
+import 'dart:developer' as developer;
+
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:unotasker_assignment/core/utils/date_formatter.dart';
+
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/errors/exceptions.dart';
+import '../../domain/entities/geocoding_error_type.dart';
+import '../../domain/entities/location_record.dart';
+import '../../domain/repositories/location_repository.dart';
+import '../datasources/background_service_datasource.dart';
+import '../datasources/location_local_datasource.dart';
+import '../datasources/location_remote_datasource.dart';
+import '../datasources/notification_datasource.dart';
+import '../models/location_record_model.dart';
+
+/// Implementation of LocationRepository that coordinates all data sources.
+class LocationRepositoryImpl implements LocationRepository {
+  final LocationLocalDataSource localDataSource;
+  final LocationRemoteDataSource remoteDataSource;
+  final NotificationDataSource notificationDataSource;
+  final BackgroundServiceDataSource? backgroundServiceDataSource;
+
+  LocationRepositoryImpl({
+    required this.localDataSource,
+    required this.remoteDataSource,
+    required this.notificationDataSource,
+    this.backgroundServiceDataSource,
+  });
+
+  @override
+  Future<bool> requestPermissions() async {
+    try {
+      // Check current permission status
+      LocationPermission permission = await Geolocator.checkPermission();
+
+      // If denied, request permission
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      // If still denied or permanently denied, return false
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return false;
+      }
+
+      // Request notification permission for Android 13+
+      await Permission.notification.request();
+
+      // Return true if we have whileInUse or always permission
+      return permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always;
+    } catch (e) {
+      throw PermissionException('Failed to request permissions', e);
+    }
+  }
+
+  @override
+  Future<bool> hasPermissions() async {
+    return await remoteDataSource.hasPermissions();
+  }
+
+  @override
+  Future<Map<String, double>> getCurrentLocation() async {
+    try {
+      final position = await remoteDataSource.getCurrentLocation();
+      return {'latitude': position.latitude, 'longitude': position.longitude};
+    } catch (e) {
+      if (e is LocationException) {
+        rethrow;
+      }
+      throw LocationException('Failed to get current location', e);
+    }
+  }
+
+  @override
+  Future<(String, GeocodingErrorType?)> geocodeLocation(
+      double latitude, double longitude) async {
+    try {
+      final address =
+          await remoteDataSource.geocodeAddress(latitude, longitude);
+      return (address, null); // Success - no error
+    } on GeocodingException catch (e) {
+      developer.log(
+        'Geocoding failed in repository',
+        name: 'LocationRepositoryImpl',
+        error: e,
+      );
+      // Return fallback address WITH error type
+      return (
+        AppConstants.addressUnavailable,
+        e.errorType as GeocodingErrorType?
+      );
+    } catch (e) {
+      // Unexpected error - log and return unknown error type
+      developer.log(
+        'Unexpected error during geocoding',
+        name: 'LocationRepositoryImpl',
+        error: e,
+      );
+      return (AppConstants.addressUnavailable, GeocodingErrorType.unknown);
+    }
+  }
+
+  @override
+  Future<void> saveRecord(LocationRecord record) async {
+    try {
+      final model = LocationRecordModel.fromEntity(record);
+      await localDataSource.saveRecord(model);
+    } catch (e) {
+      if (e is StorageException) {
+        rethrow;
+      }
+      throw StorageException('Failed to save location record', e);
+    }
+  }
+
+  @override
+  Future<List<LocationRecord>> getAllRecords() async {
+    try {
+      final models = await localDataSource.getAllRecords();
+      return models.map((model) => model.toEntity()).toList();
+    } catch (e) {
+      if (e is StorageException) {
+        rethrow;
+      }
+      throw StorageException('Failed to fetch location records', e);
+    }
+  }
+
+  @override
+  Future<void> deleteAllRecords() async {
+    try {
+      await localDataSource.deleteAllRecords();
+    } catch (e) {
+      if (e is StorageException) {
+        rethrow;
+      }
+      throw StorageException('Failed to delete location records', e);
+    }
+  }
+
+  @override
+  Future<void> showNotification(LocationRecord record) async {
+    try {
+      final title =
+          'Tracking started @ ${DateFormatter.formatTimeOnly(record.timestamp)}';
+      final body = _formatNotificationBody(record);
+      await notificationDataSource.showNotification(title, body);
+    } catch (e) {
+      if (e is NotificationException) {
+        rethrow;
+      }
+      throw NotificationException('Failed to show notification', e);
+    }
+  }
+
+  @override
+  Future<void> updateNotification(LocationRecord record) async {
+    try {
+      final title =
+          'Continuing tracking @ ${DateFormatter.formatTimeOnly(record.timestamp)}';
+      final body = _formatNotificationBody(record);
+      await notificationDataSource.updateNotification(title, body);
+    } catch (e) {
+      if (e is NotificationException) {
+        rethrow;
+      }
+      throw NotificationException('Failed to update notification', e);
+    }
+  }
+
+  @override
+  Future<void> clearNotification() async {
+    try {
+      await notificationDataSource.clearNotification();
+    } catch (e) {
+      if (e is NotificationException) {
+        rethrow;
+      }
+      throw NotificationException('Failed to clear notification', e);
+    }
+  }
+
+  @override
+  Future<void> startBackgroundService() async {
+    if (backgroundServiceDataSource == null) {
+      throw BackgroundServiceException(
+        'Background service data source not available',
+        null,
+      );
+    }
+    try {
+      await backgroundServiceDataSource!.startPeriodicTracking();
+    } catch (e) {
+      if (e is BackgroundServiceException) {
+        rethrow;
+      }
+      throw BackgroundServiceException('Failed to start background service', e);
+    }
+  }
+
+  @override
+  Future<void> stopBackgroundService() async {
+    if (backgroundServiceDataSource == null) {
+      throw BackgroundServiceException(
+        'Background service data source not available',
+        null,
+      );
+    }
+    try {
+      await backgroundServiceDataSource!.stopPeriodicTracking();
+    } catch (e) {
+      if (e is BackgroundServiceException) {
+        rethrow;
+      }
+      throw BackgroundServiceException('Failed to stop background service', e);
+    }
+  }
+
+  @override
+  Future<bool> checkServiceStatus() async {
+    if (backgroundServiceDataSource == null) {
+      throw BackgroundServiceException(
+        'Background service data source not available',
+        null,
+      );
+    }
+    try {
+      return await backgroundServiceDataSource!.isServiceRunning();
+    } catch (e) {
+      if (e is BackgroundServiceException) {
+        rethrow;
+      }
+      throw BackgroundServiceException('Failed to check service status', e);
+    }
+  }
+
+  /// Formats the notification body with location data.
+  String _formatNotificationBody(LocationRecord record) {
+    return 'Lat: ${record.latitude.toStringAsFixed(6)}, Lng: ${record.longitude.toStringAsFixed(6)}\n${record.address}';
+  }
+}
